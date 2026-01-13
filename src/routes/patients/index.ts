@@ -1,5 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { Patient, PatientBody, PatientParams, ApiResponse } from "../../types";
+import {
+  Patient,
+  PatientCreateBody,
+  PatientUpdateBody,
+  PatientParams,
+  ApiResponse,
+} from "../../types";
 
 async function patientRoutes(fastify: FastifyInstance): Promise<void> {
   // Get all patients
@@ -10,10 +16,8 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
       reply: FastifyReply
     ): Promise<ApiResponse<Patient[]>> => {
       try {
-        const result = await fastify.db.query<Patient>(
-          "SELECT * FROM patients ORDER BY id"
-        );
-        return { data: result.rows };
+        const patients = await fastify.patientService.getAllPatients();
+        return { data: patients };
       } catch (err) {
         reply.status(500);
         return { error: (err as Error).message };
@@ -30,44 +34,33 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
     ): Promise<ApiResponse<Patient>> => {
       try {
         const { id } = request.params;
-        const result = await fastify.db.query<Patient>(
-          "SELECT * FROM patients WHERE id = $1",
-          [id]
-        );
-
-        if (result.rows.length === 0) {
-          reply.status(404);
-          return { error: "Patient not found" };
-        }
-
-        return { data: result.rows[0] };
+        const patient = await fastify.patientService.getPatientById(id);
+        return { data: patient };
       } catch (err) {
-        reply.status(500);
-        return { error: (err as Error).message };
+        const error = err as Error;
+        if (error.message === "Patient not found") {
+          reply.status(404);
+        } else {
+          reply.status(500);
+        }
+        return { error: error.message };
       }
     }
   );
 
   // Create new patient
-  fastify.post<{ Body: PatientBody }>(
+  fastify.post<{ Body: PatientCreateBody }>(
     "/",
     async (
-      request: FastifyRequest<{ Body: PatientBody }>,
+      request: FastifyRequest<{ Body: PatientCreateBody }>,
       reply: FastifyReply
     ): Promise<ApiResponse<Patient>> => {
       try {
-        const { first_name, last_name, date_of_birth, phone, email } =
-          request.body;
-
-        const result = await fastify.db.query<Patient>(
-          `INSERT INTO patients (first_name, last_name, date_of_birth, phone, email) 
-           VALUES ($1, $2, $3, $4, $5) 
-           RETURNING *`,
-          [first_name, last_name, date_of_birth, phone, email]
+        const patient = await fastify.patientService.createPatient(
+          request.body
         );
-
         reply.status(201);
-        return { data: result.rows[0] };
+        return { data: patient };
       } catch (err) {
         reply.status(500);
         return { error: (err as Error).message };
@@ -76,39 +69,35 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   // Update patient
-  fastify.put<{ Params: PatientParams; Body: PatientBody }>(
+  fastify.put<{ Params: PatientParams; Body: PatientUpdateBody }>(
     "/:id",
     async (
-      request: FastifyRequest<{ Params: PatientParams; Body: PatientBody }>,
+      request: FastifyRequest<{
+        Params: PatientParams;
+        Body: PatientUpdateBody;
+      }>,
       reply: FastifyReply
     ): Promise<ApiResponse<Patient>> => {
       try {
         const { id } = request.params;
-        const { first_name, last_name, date_of_birth, phone, email } =
-          request.body;
-
-        const result = await fastify.db.query<Patient>(
-          `UPDATE patients 
-           SET first_name = $1, last_name = $2, date_of_birth = $3, phone = $4, email = $5, updated_at = NOW()
-           WHERE id = $6 
-           RETURNING *`,
-          [first_name, last_name, date_of_birth, phone, email, id]
+        const patient = await fastify.patientService.updatePatient(
+          id,
+          request.body
         );
-
-        if (result.rows.length === 0) {
-          reply.status(404);
-          return { error: "Patient not found" };
-        }
-
-        return { data: result.rows[0] };
+        return { data: patient };
       } catch (err) {
-        reply.status(500);
-        return { error: (err as Error).message };
+        const error = err as Error;
+        if (error.message === "Patient not found") {
+          reply.status(404);
+        } else {
+          reply.status(500);
+        }
+        return { error: error.message };
       }
     }
   );
 
-  // Delete patient
+  // Soft delete patient
   fastify.delete<{ Params: PatientParams }>(
     "/:id",
     async (
@@ -117,20 +106,39 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
     ): Promise<ApiResponse> => {
       try {
         const { id } = request.params;
-        const result = await fastify.db.query<Patient>(
-          "DELETE FROM patients WHERE id = $1 RETURNING *",
-          [id]
-        );
-
-        if (result.rows.length === 0) {
-          reply.status(404);
-          return { error: "Patient not found" };
-        }
-
+        await fastify.patientService.softDeletePatient(id);
         return { message: "Patient deleted successfully" };
       } catch (err) {
-        reply.status(500);
-        return { error: (err as Error).message };
+        const error = err as Error;
+        if (error.message === "Patient not found") {
+          reply.status(404);
+        } else {
+          reply.status(500);
+        }
+        return { error: error.message };
+      }
+    }
+  );
+
+  // Hard delete patient (permanent)
+  fastify.delete<{ Params: PatientParams }>(
+    "/:id/permanent",
+    async (
+      request: FastifyRequest<{ Params: PatientParams }>,
+      reply: FastifyReply
+    ): Promise<ApiResponse> => {
+      try {
+        const { id } = request.params;
+        await fastify.patientService.hardDeletePatient(id);
+        return { message: "Patient permanently deleted" };
+      } catch (err) {
+        const error = err as Error;
+        if (error.message === "Patient not found") {
+          reply.status(404);
+        } else {
+          reply.status(500);
+        }
+        return { error: error.message };
       }
     }
   );

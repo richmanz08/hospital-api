@@ -1,5 +1,5 @@
 import { PatientRepository } from "../repositories/patient.repository";
-import { Patient, PatientBody } from "../types";
+import { Patient, PatientCreateBody, PatientUpdateBody } from "../types";
 import { NotFoundError } from "../utils/errors";
 
 export class PatientService {
@@ -17,11 +17,11 @@ export class PatientService {
     return patient;
   }
 
-  async createPatient(data: PatientBody): Promise<Patient> {
+  async createPatient(data: PatientCreateBody): Promise<Patient> {
     return this.patientRepository.create(data);
   }
 
-  async updatePatient(id: string, data: PatientBody): Promise<Patient> {
+  async updatePatient(id: string, data: PatientUpdateBody): Promise<Patient> {
     const patient = await this.patientRepository.update(id, data);
     if (!patient) {
       throw new NotFoundError("Patient not found");
@@ -29,8 +29,15 @@ export class PatientService {
     return patient;
   }
 
-  async deletePatient(id: string): Promise<void> {
-    const patient = await this.patientRepository.delete(id);
+  async softDeletePatient(id: string): Promise<void> {
+    const patient = await this.patientRepository.softDelete(id);
+    if (!patient) {
+      throw new NotFoundError("Patient not found");
+    }
+  }
+
+  async hardDeletePatient(id: string): Promise<void> {
+    const patient = await this.patientRepository.hardDelete(id);
     if (!patient) {
       throw new NotFoundError("Patient not found");
     }

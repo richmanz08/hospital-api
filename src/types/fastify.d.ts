@@ -1,5 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { Pool, QueryResult, QueryResultRow } from "pg";
+import { PatientService } from "../services/patient.service";
+import { StaffService } from "../services/staff.service";
 
 // Extend Fastify types
 declare module "fastify" {
@@ -11,6 +13,8 @@ declare module "fastify" {
       ) => Promise<QueryResult<T>>;
       pool: Pool;
     };
+    patientService: PatientService;
+    staffService: StaffService;
   }
 }
 
