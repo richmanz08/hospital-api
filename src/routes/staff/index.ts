@@ -1,43 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-
-// Types
-interface Staff {
-  id: string;
-  gender: string;
-  full_name_eng: string;
-  full_name_th: string;
-  nickname: string | null;
-  national_id: string;
-  role: string;
-  age: number | null;
-  profile_image_url: string | null;
-  hire_date: Date;
-  termination_date: Date | null;
-  created_at: Date;
-  updated_at: Date;
-  deleted_at: Date | null;
-}
-type StaffWithoutDeleted = Omit<Staff, "deleted_at">;
-
-interface StaffBody {
-  full_name_eng: string;
-  full_name_th: string;
-  nickname?: string;
-  national_id: string;
-  role: string;
-  age?: number;
-  profile_image_url?: string;
-}
-
-interface StaffParams {
-  id: string;
-}
-
-interface ApiResponse<T = any> {
-  data?: T;
-  message?: string;
-  error?: string;
-}
+import {
+  Staff,
+  StaffResponse,
+  StaffBody,
+  StaffParams,
+  ApiResponse,
+} from "../../types";
 
 async function staffRoutes(fastify: FastifyInstance): Promise<void> {
   // Get all staff (excluding soft deleted)
@@ -46,7 +14,7 @@ async function staffRoutes(fastify: FastifyInstance): Promise<void> {
     async (
       _request: FastifyRequest,
       reply: FastifyReply
-    ): Promise<ApiResponse<StaffWithoutDeleted[]>> => {
+    ): Promise<ApiResponse<StaffResponse[]>> => {
       try {
         const result = await fastify.db.query<Staff>(
           "SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY created_at DESC"

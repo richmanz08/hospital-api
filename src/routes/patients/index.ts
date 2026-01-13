@@ -1,39 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-
-// Types
-interface Patient {
-  id: number;
-  first_name: string;
-  last_name: string;
-  date_of_birth: string | null;
-  phone: string | null;
-  email: string | null;
-  created_at: Date;
-  updated_at: Date;
-}
-
-interface PatientBody {
-  first_name: string;
-  last_name: string;
-  date_of_birth?: string;
-  phone?: string;
-  email?: string;
-}
-
-interface PatientParams {
-  id: string;
-}
-
-interface ApiResponse<T = any> {
-  data?: T;
-  message?: string;
-  error?: string;
-}
+import { Patient, PatientBody, PatientParams, ApiResponse } from "../../types";
 
 async function patientRoutes(fastify: FastifyInstance): Promise<void> {
   // Get all patients
   fastify.get(
-    "/patients",
+    "/",
     async (
       _request: FastifyRequest,
       reply: FastifyReply
@@ -52,7 +23,7 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Get patient by ID
   fastify.get<{ Params: PatientParams }>(
-    "/patients/:id",
+    "/:id",
     async (
       request: FastifyRequest<{ Params: PatientParams }>,
       reply: FastifyReply
@@ -79,7 +50,7 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Create new patient
   fastify.post<{ Body: PatientBody }>(
-    "/patients",
+    "/",
     async (
       request: FastifyRequest<{ Body: PatientBody }>,
       reply: FastifyReply
@@ -106,7 +77,7 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Update patient
   fastify.put<{ Params: PatientParams; Body: PatientBody }>(
-    "/patients/:id",
+    "/:id",
     async (
       request: FastifyRequest<{ Params: PatientParams; Body: PatientBody }>,
       reply: FastifyReply
@@ -139,7 +110,7 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Delete patient
   fastify.delete<{ Params: PatientParams }>(
-    "/patients/:id",
+    "/:id",
     async (
       request: FastifyRequest<{ Params: PatientParams }>,
       reply: FastifyReply
