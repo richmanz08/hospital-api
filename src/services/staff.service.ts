@@ -1,5 +1,5 @@
 import { StaffRepository } from "../repositories/staff.repository";
-import { Staff, StaffBody, StaffResponse, StaffFilter } from "../types";
+import { Staff, StaffBody, StaffResponse, StaffFilter, Gender } from "../types";
 import { PaginatedResponse } from "../types/common";
 import {
   ValidationError,
@@ -118,9 +118,10 @@ export class StaffService {
   }
 
   private validateGender(gender: string): void {
-    const validGenders = ["male", "female", "other"];
-    if (!validGenders.includes(gender)) {
-      throw new ValidationError("Gender must be male, female, or other");
+    if (!Object.values(Gender).includes(gender as Gender)) {
+      throw new ValidationError(
+        `Gender must be one of: ${Object.values(Gender).join(", ")}`
+      );
     }
   }
 

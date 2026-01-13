@@ -1,7 +1,14 @@
+// Gender enum
+export enum Gender {
+  MALE = "MALE",
+  FEMALE = "FEMALE",
+  OTHER = "OTHER",
+}
+
 // Staff entity from database
 export interface Staff {
   id: string;
-  gender: string;
+  gender: Gender;
   full_name_eng: string;
   full_name_th: string;
   nickname: string | null;
