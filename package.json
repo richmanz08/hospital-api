@@ -7,6 +7,10 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:reset": "docker exec hospital-db psql -U postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'hospital_db' AND pid <> pg_backend_pid();\" && docker exec hospital-db psql -U postgres -c 'DROP DATABASE IF EXISTS hospital_db;' && docker exec hospital-db psql -U postgres -c 'CREATE DATABASE hospital_db;' && npm run db:migrate",
+    "db:setup": "npm run db:migrate && npm run db:seed",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
