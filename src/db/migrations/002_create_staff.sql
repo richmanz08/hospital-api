@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS staff (
     full_name_th VARCHAR(255) NOT NULL,
     nickname VARCHAR(100),
     national_id CHAR(13) UNIQUE NOT NULL,
-    phone VARCHAR(15) UNIQUE NOT NULL,
+    phone VARCHAR(10) UNIQUE NOT NULL,
     gender VARCHAR(10) NOT NULL,
     role VARCHAR(100) NOT NULL,
     age INTEGER,
