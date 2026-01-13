@@ -3,6 +3,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 // Types
 interface Staff {
   id: string;
+  gender: string;
   full_name_eng: string;
   full_name_th: string;
   nickname: string | null;
@@ -10,10 +11,13 @@ interface Staff {
   role: string;
   age: number | null;
   profile_image_url: string | null;
+  hire_date: Date;
+  termination_date: Date | null;
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;
 }
+type StaffWithoutDeleted = Omit<Staff, "deleted_at">;
 
 interface StaffBody {
   full_name_eng: string;
@@ -38,11 +42,11 @@ interface ApiResponse<T = any> {
 async function staffRoutes(fastify: FastifyInstance): Promise<void> {
   // Get all staff (excluding soft deleted)
   fastify.get(
-    "/staff",
+    "/",
     async (
       _request: FastifyRequest,
       reply: FastifyReply
-    ): Promise<ApiResponse<Staff[]>> => {
+    ): Promise<ApiResponse<StaffWithoutDeleted[]>> => {
       try {
         const result = await fastify.db.query<Staff>(
           "SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY created_at DESC"
@@ -57,7 +61,7 @@ async function staffRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Get staff by ID
   fastify.get<{ Params: StaffParams }>(
-    "/staff/:id",
+    "/:id",
     async (
       request: FastifyRequest<{ Params: StaffParams }>,
       reply: FastifyReply
@@ -84,7 +88,7 @@ async function staffRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Create new staff
   fastify.post<{ Body: StaffBody }>(
-    "/staff",
+    "/",
     async (
       request: FastifyRequest<{ Body: StaffBody }>,
       reply: FastifyReply
@@ -132,7 +136,7 @@ async function staffRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Update staff
   fastify.put<{ Params: StaffParams; Body: StaffBody }>(
-    "/staff/:id",
+    "/:id",
     async (
       request: FastifyRequest<{ Params: StaffParams; Body: StaffBody }>,
       reply: FastifyReply
@@ -188,7 +192,7 @@ async function staffRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Soft delete staff
   fastify.delete<{ Params: StaffParams }>(
-    "/staff/:id",
+    "/:id",
     async (
       request: FastifyRequest<{ Params: StaffParams }>,
       reply: FastifyReply
