@@ -1,5 +1,5 @@
 import { QueryResult, QueryResultRow } from "pg";
-import { Staff, StaffBody } from "../types";
+import { Staff, StaffBody, StaffFilter } from "../types";
 
 // Database interface for dependency injection
 interface Database {
@@ -12,11 +12,70 @@ interface Database {
 export class StaffRepository {
   constructor(private db: Database) {}
 
-  async findAll(): Promise<Staff[]> {
-    const result = await this.db.query<Staff>(
-      "SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY created_at DESC"
+  async findAll(
+    filter?: StaffFilter,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{ data: Staff[]; total: number }> {
+    const conditions: string[] = ["deleted_at IS NULL"];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Search by name (eng or th)
+    if (filter?.search) {
+      conditions.push(
+        `(full_name_eng ILIKE $${paramIndex} OR full_name_th ILIKE $${paramIndex})`
+      );
+      params.push(`%${filter.search}%`);
+      paramIndex++;
+    }
+
+    // Filter by gender
+    if (filter?.gender) {
+      conditions.push(`gender = $${paramIndex}`);
+      params.push(filter.gender);
+      paramIndex++;
+    }
+
+    // Filter by role
+    if (filter?.role) {
+      conditions.push(`role = $${paramIndex}`);
+      params.push(filter.role);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.join(" AND ");
+
+    // Sort
+    const validSortFields = [
+      "full_name_eng",
+      "full_name_th",
+      "created_at",
+      "hire_date",
+      "role",
+    ];
+    const sortBy = validSortFields.includes(filter?.sortBy || "")
+      ? filter!.sortBy
+      : "created_at";
+    const sortOrder = filter?.sortOrder === "asc" ? "ASC" : "DESC";
+
+    // Count total
+    const countResult = await this.db.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM staff WHERE ${whereClause}`,
+      params
     );
-    return result.rows;
+    const total = parseInt(countResult.rows[0].count);
+
+    // Get paginated data
+    const offset = (page - 1) * limit;
+    const dataResult = await this.db.query<Staff>(
+      `SELECT * FROM staff WHERE ${whereClause} 
+       ORDER BY ${sortBy} ${sortOrder}
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limit, offset]
+    );
+
+    return { data: dataResult.rows, total };
   }
 
   async findById(id: string): Promise<Staff | null> {

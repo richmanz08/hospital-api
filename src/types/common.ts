@@ -5,6 +5,23 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
+// Paginated Response
+export interface PaginatedResponse<T = any> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Pagination Query
+export interface PaginationQuery {
+  page?: string;
+  limit?: string;
+}
+
 // Common ID Params
 export interface IdParams {
   id: string;

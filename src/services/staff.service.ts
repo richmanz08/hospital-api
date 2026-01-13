@@ -1,5 +1,6 @@
 import { StaffRepository } from "../repositories/staff.repository";
-import { Staff, StaffBody, StaffResponse } from "../types";
+import { Staff, StaffBody, StaffResponse, StaffFilter } from "../types";
+import { PaginatedResponse } from "../types/common";
 import {
   ValidationError,
   NotFoundError,
@@ -9,9 +10,30 @@ import {
 export class StaffService {
   constructor(private staffRepository: StaffRepository) {}
 
-  async getAllStaff(): Promise<StaffResponse[]> {
-    const staffList = await this.staffRepository.findAll();
-    return staffList.map(this.toResponse);
+  async getAllStaff(
+    filter?: StaffFilter,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<PaginatedResponse<StaffResponse>> {
+    // Validate pagination
+    const validPage = Math.max(1, page);
+    const validLimit = Math.min(Math.max(1, limit), 100); // Max 100 per page
+
+    const { data, total } = await this.staffRepository.findAll(
+      filter,
+      validPage,
+      validLimit
+    );
+
+    return {
+      data: data.map((staff) => this.toResponse(staff)),
+      pagination: {
+        page: validPage,
+        limit: validLimit,
+        total,
+        totalPages: Math.ceil(total / validLimit),
+      },
+    };
   }
 
   async getStaffById(id: string): Promise<StaffResponse> {
