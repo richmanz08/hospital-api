@@ -1,25 +1,20 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import {
-  Staff,
-  StaffResponse,
-  StaffBody,
-  StaffParams,
-  ApiResponse,
-} from "../../types";
+import { StaffBody, StaffParams, ApiResponse, StaffResponse } from "../../types";
+import { StaffRepository } from "../../repositories";
+import { StaffService, ValidationError, NotFoundError, DuplicateError } from "../../services";
 
 async function staffRoutes(fastify: FastifyInstance): Promise<void> {
-  // Get all staff (excluding soft deleted)
+  // Initialize repository and service
+  const staffRepository = new StaffRepository(fastify.db);
+  const staffService = new StaffService(staffRepository);
+
+  // Get all staff
   fastify.get(
     "/",
-    async (
-      _request: FastifyRequest,
-      reply: FastifyReply
-    ): Promise<ApiResponse<StaffResponse[]>> => {
+    async (_request: FastifyRequest, reply: FastifyReply): Promise<ApiResponse<StaffResponse[]>> => {
       try {
-        const result = await fastify.db.query<Staff>(
-          "SELECT * FROM staff WHERE deleted_at IS NULL ORDER BY created_at DESC"
-        );
-        return { data: result.rows };
+        const data = await staffService.getAllStaff();
+        return { data };
       } catch (err) {
         reply.status(500);
         return { error: (err as Error).message };
@@ -30,24 +25,15 @@ async function staffRoutes(fastify: FastifyInstance): Promise<void> {
   // Get staff by ID
   fastify.get<{ Params: StaffParams }>(
     "/:id",
-    async (
-      request: FastifyRequest<{ Params: StaffParams }>,
-      reply: FastifyReply
-    ): Promise<ApiResponse<Staff>> => {
+    async (request: FastifyRequest<{ Params: StaffParams }>, reply: FastifyReply): Promise<ApiResponse<StaffResponse>> => {
       try {
-        const { id } = request.params;
-        const result = await fastify.db.query<Staff>(
-          "SELECT * FROM staff WHERE id = $1 AND deleted_at IS NULL",
-          [id]
-        );
-
-        if (result.rows.length === 0) {
-          reply.status(404);
-          return { error: "Staff not found" };
-        }
-
-        return { data: result.rows[0] };
+        const data = await staffService.getStaffById(request.params.id);
+        return { data };
       } catch (err) {
+        if (err instanceof NotFoundError) {
+          reply.status(404);
+          return { error: err.message };
+        }
         reply.status(500);
         return { error: (err as Error).message };
       }
@@ -57,45 +43,20 @@ async function staffRoutes(fastify: FastifyInstance): Promise<void> {
   // Create new staff
   fastify.post<{ Body: StaffBody }>(
     "/",
-    async (
-      request: FastifyRequest<{ Body: StaffBody }>,
-      reply: FastifyReply
-    ): Promise<ApiResponse<Staff>> => {
+    async (request: FastifyRequest<{ Body: StaffBody }>, reply: FastifyReply): Promise<ApiResponse<StaffResponse>> => {
       try {
-        const {
-          full_name_eng,
-          full_name_th,
-          nickname,
-          national_id,
-          role,
-          age,
-          profile_image_url,
-        } = request.body;
-
-        // Validate national_id is 13 digits
-        if (!/^\d{13}$/.test(national_id)) {
-          reply.status(400);
-          return { error: "National ID must be exactly 13 digits" };
-        }
-
-        const result = await fastify.db.query<Staff>(
-          `INSERT INTO staff (full_name_eng, full_name_th, nickname, national_id, role, age, profile_image_url) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           RETURNING *`,
-          [
-            full_name_eng,
-            full_name_th,
-            nickname,
-            national_id,
-            role,
-            age,
-            profile_image_url,
-          ]
-        );
-
+        const data = await staffService.createStaff(request.body);
         reply.status(201);
-        return { data: result.rows[0] };
+        return { data };
       } catch (err) {
+        if (err instanceof ValidationError) {
+          reply.status(400);
+          return { error: err.message };
+        }
+        if (err instanceof DuplicateError) {
+          reply.status(409);
+          return { error: err.message };
+        }
         reply.status(500);
         return { error: (err as Error).message };
       }
@@ -108,77 +69,41 @@ async function staffRoutes(fastify: FastifyInstance): Promise<void> {
     async (
       request: FastifyRequest<{ Params: StaffParams; Body: StaffBody }>,
       reply: FastifyReply
-    ): Promise<ApiResponse<Staff>> => {
+    ): Promise<ApiResponse<StaffResponse>> => {
       try {
-        const { id } = request.params;
-        const {
-          full_name_eng,
-          full_name_th,
-          nickname,
-          national_id,
-          role,
-          age,
-          profile_image_url,
-        } = request.body;
-
-        // Validate national_id is 13 digits
-        if (!/^\d{13}$/.test(national_id)) {
-          reply.status(400);
-          return { error: "National ID must be exactly 13 digits" };
-        }
-
-        const result = await fastify.db.query<Staff>(
-          `UPDATE staff 
-           SET full_name_eng = $1, full_name_th = $2, nickname = $3, national_id = $4, 
-               role = $5, age = $6, profile_image_url = $7, updated_at = NOW()
-           WHERE id = $8 AND deleted_at IS NULL
-           RETURNING *`,
-          [
-            full_name_eng,
-            full_name_th,
-            nickname,
-            national_id,
-            role,
-            age,
-            profile_image_url,
-            id,
-          ]
-        );
-
-        if (result.rows.length === 0) {
-          reply.status(404);
-          return { error: "Staff not found" };
-        }
-
-        return { data: result.rows[0] };
+        const data = await staffService.updateStaff(request.params.id, request.body);
+        return { data };
       } catch (err) {
+        if (err instanceof ValidationError) {
+          reply.status(400);
+          return { error: err.message };
+        }
+        if (err instanceof NotFoundError) {
+          reply.status(404);
+          return { error: err.message };
+        }
+        if (err instanceof DuplicateError) {
+          reply.status(409);
+          return { error: err.message };
+        }
         reply.status(500);
         return { error: (err as Error).message };
       }
     }
   );
 
-  // Soft delete staff
+  // Delete staff (soft delete)
   fastify.delete<{ Params: StaffParams }>(
     "/:id",
-    async (
-      request: FastifyRequest<{ Params: StaffParams }>,
-      reply: FastifyReply
-    ): Promise<ApiResponse> => {
+    async (request: FastifyRequest<{ Params: StaffParams }>, reply: FastifyReply): Promise<ApiResponse> => {
       try {
-        const { id } = request.params;
-        const result = await fastify.db.query<Staff>(
-          "UPDATE staff SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING *",
-          [id]
-        );
-
-        if (result.rows.length === 0) {
-          reply.status(404);
-          return { error: "Staff not found" };
-        }
-
+        await staffService.deleteStaff(request.params.id);
         return { message: "Staff deleted successfully" };
       } catch (err) {
+        if (err instanceof NotFoundError) {
+          reply.status(404);
+          return { error: err.message };
+        }
         reply.status(500);
         return { error: (err as Error).message };
       }
