@@ -1,0 +1,118 @@
+// Hospital Database Schema
+// Generated for dbdiagram.io
+// Copy this content and paste at https://dbdiagram.io
+
+// ============================================
+// PATIENTS
+// ============================================
+Table patients {
+  id serial [pk, increment]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  date_of_birth date
+  phone varchar(20)
+  email varchar(255)
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    email
+  }
+}
+
+// ============================================
+// STAFF
+// ============================================
+Table staff {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  gender varchar(10) [not null, note: 'MALE, FEMALE, OTHER']
+  full_name_eng varchar(255) [not null]
+  full_name_th varchar(255) [not null]
+  nickname varchar(100)
+  national_id char(13) [unique, not null, note: 'Thai National ID - 13 digits']
+  phone varchar(15) [unique, not null]
+  role varchar(100) [not null]
+  age integer
+  profile_image_url text
+  hire_date date [not null]
+  termination_date date
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  deleted_at timestamp [note: 'Soft delete']
+
+  indexes {
+    national_id
+    role
+    deleted_at
+  }
+}
+
+// ============================================
+// ROOM
+// ============================================
+Table room {
+  id serial [pk, increment]
+  room_number varchar(10) [unique, not null]
+  building varchar(50) [not null]
+  floor integer [not null]
+  room_type varchar(50) [not null, note: 'GENERAL, ICU, OPERATING_THEATER, RECOVERY, VIP, SEMI_PRIVATE, PRIVATE']
+  capacity integer [not null]
+  facilities text[] [note: 'Array of facilities']
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  deleted_at timestamp [note: 'Soft delete']
+}
+
+// ============================================
+// ROOM TYPE PRICE (Master Data)
+// ============================================
+Table room_type_price {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  room_type varchar(50) [unique, not null, note: 'GENERAL, SEMI_PRIVATE, PRIVATE, VIP, ICU, CCU, NICU, OPERATING_THEATER, RECOVERY, ER, ISOLATION']
+  name_en varchar(100) [not null]
+  name_th varchar(100) [not null]
+  description text
+  base_price_per_day decimal(10,2) [not null]
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    room_type
+    is_active
+  }
+}
+
+// ============================================
+// RELATIONSHIPS
+// ============================================
+Ref: room.room_type > room_type_price.room_type
+
+// ============================================
+// FUTURE TABLES (Uncomment when ready)
+// ============================================
+
+// Table admissions {
+//   id uuid [pk]
+//   patient_id integer [ref: > patients.id]
+//   room_id integer [ref: > room.id]
+//   attending_doctor_id uuid [ref: > staff.id]
+//   admission_date timestamp [not null]
+//   discharge_date timestamp
+//   status varchar(20) [note: 'ADMITTED, DISCHARGED, TRANSFERRED']
+//   created_at timestamp
+//   updated_at timestamp
+// }
+
+// Table appointments {
+//   id uuid [pk]
+//   patient_id integer [ref: > patients.id]
+//   doctor_id uuid [ref: > staff.id]
+//   room_id integer [ref: > room.id]
+//   appointment_date timestamp [not null]
+//   status varchar(20) [note: 'SCHEDULED, COMPLETED, CANCELLED']
+//   notes text
+//   created_at timestamp
+//   updated_at timestamp
+// }
