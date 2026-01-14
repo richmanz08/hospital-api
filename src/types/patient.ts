@@ -44,10 +44,7 @@ export interface PatientParams {
   id: string;
 }
 
-export interface PatientQuerystring extends PatientFilter, PaginationQuery {
-  page?: string;
-  limit?: string;
-}
+export interface PatientQuerystring extends PatientFilter, PaginationQuery {}
 
 export interface PatientFilter {
   search?: string; // search by first_name, last_name, nickname, phone, national_id

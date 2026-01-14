@@ -19,3 +19,10 @@ export class DuplicateError extends Error {
     this.name = "DuplicateError";
   }
 }
+
+export class ConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConflictError";
+  }
+}

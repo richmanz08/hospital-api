@@ -18,8 +18,8 @@ export interface PaginatedResponse<T = any> {
 
 // Pagination Query
 export interface PaginationQuery {
-  page?: string;
-  limit?: string;
+  page?: number;
+  limit?: number;
 }
 
 // Common ID Params
