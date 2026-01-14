@@ -142,7 +142,7 @@ const uploadRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{
     Body: { key: string };
   }>(
-    "/delete",
+    "/",
     {
       schema: {
         body: {
@@ -169,54 +169,6 @@ const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(500).send({
           success: false,
           message: "Failed to delete file",
-          error: error.message,
-        });
-      }
-    }
-  );
-
-  // Get presigned upload URL (for client-side upload)
-  fastify.post<{
-    Body: { filename: string; contentType: string; expiresIn?: number };
-  }>(
-    "/presigned-upload-url",
-    {
-      schema: {
-        body: {
-          type: "object",
-          required: ["filename", "contentType"],
-          properties: {
-            filename: { type: "string" },
-            contentType: { type: "string" },
-            expiresIn: { type: "number", default: 3600 },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const { filename, contentType, expiresIn = 3600 } = request.body;
-
-        const folder = contentType.startsWith("image/")
-          ? "images"
-          : "documents";
-        const key = s3Service.generateUniqueKey(folder, filename);
-
-        const url = await s3Service.getSignedUploadUrl(
-          key,
-          contentType,
-          expiresIn
-        );
-
-        return reply.send({
-          success: true,
-          data: { url, key, expiresIn },
-        });
-      } catch (error: any) {
-        fastify.log.error(error);
-        return reply.code(500).send({
-          success: false,
-          message: "Failed to generate presigned upload URL",
           error: error.message,
         });
       }
