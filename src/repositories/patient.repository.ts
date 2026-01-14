@@ -1,5 +1,10 @@
 import { QueryResult, QueryResultRow } from "pg";
-import { Patient, PatientCreateBody, PatientUpdateBody } from "../types";
+import {
+  Patient,
+  PatientCreateBody,
+  PatientFilter,
+  PatientUpdateBody,
+} from "../types";
 
 // Database interface for dependency injection
 interface Database {
@@ -12,13 +17,55 @@ interface Database {
 export class PatientRepository {
   constructor(private db: Database) {}
 
-  async findAll(): Promise<Patient[]> {
+  async findAll(
+    filter?: PatientFilter,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{ data: Patient[]; total: number }> {
+    const conditions: string[] = ["deleted_at IS NULL"];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    // Filter by search (first_name, last_name, nickname, phone, national_id)
+    if (filter?.search) {
+      conditions.push(
+        `(first_name ILIKE $${paramCount} OR last_name ILIKE $${paramCount} OR nickname ILIKE $${paramCount} OR phone ILIKE $${paramCount} OR national_id ILIKE $${paramCount})`
+      );
+      values.push(`%${filter.search}%`);
+      paramCount++;
+    }
+
+    // Filter by gender
+    if (filter?.gender) {
+      conditions.push(`gender = $${paramCount}`);
+      values.push(filter.gender);
+      paramCount++;
+    }
+
+    const whereClause = conditions.join(" AND ");
+
+    // Count query (without pagination parameters)
+    const countResult = await this.db.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM patients 
+       WHERE ${whereClause}`,
+      values.slice(0, paramCount - 1) // Only filter parameters, no pagination
+    );
+
+    // Pagination
+    const offset = (page - 1) * limit;
+    values.push(limit, offset);
+
     const result = await this.db.query<Patient>(
       `SELECT * FROM patients 
-       WHERE deleted_at IS NULL 
-       ORDER BY created_at DESC`
+       WHERE ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT $${paramCount} OFFSET $${paramCount + 1}`,
+      values
     );
-    return result.rows;
+    return {
+      data: result.rows,
+      total: parseInt(countResult.rows[0].count, 10),
+    };
   }
 
   async findById(id: string): Promise<Patient | null> {

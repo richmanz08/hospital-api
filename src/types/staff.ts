@@ -1,3 +1,5 @@
+import { PaginationQuery } from "./common";
+
 // Gender enum
 export enum Gender {
   MALE = "MALE",
@@ -48,15 +50,7 @@ export interface StaffParams {
 }
 
 // Staff query params for filtering and pagination
-export interface StaffQuery {
-  page?: string;
-  limit?: string;
-  search?: string; // search by full_name_eng or full_name_th
-  gender?: string; // filter by gender
-  role?: string; // filter by role
-  sortBy?: string; // sort field
-  sortOrder?: "asc" | "desc";
-}
+export interface StaffQuery extends StaffFilter, PaginationQuery {}
 
 // Staff filter options for repository
 export interface StaffFilter {

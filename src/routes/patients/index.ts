@@ -5,6 +5,9 @@ import {
   PatientUpdateBody,
   PatientParams,
   ApiResponse,
+  PatientQuerystring,
+  PaginationQuery,
+  PaginatedResponse,
 } from "../../types";
 
 async function patientRoutes(fastify: FastifyInstance): Promise<void> {
@@ -12,11 +15,16 @@ async function patientRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get(
     "/",
     async (
-      _request: FastifyRequest,
+      request: FastifyRequest<{
+        Querystring: PatientQuerystring;
+      }>,
       reply: FastifyReply
-    ): Promise<ApiResponse<Patient[]>> => {
+    ): Promise<PaginatedResponse<Patient> | ApiResponse> => {
       try {
-        const patients = await fastify.patientService.getAllPatients();
+        // Implement pagination and filtering logic
+        const patients = await fastify.patientService.getAllPatients(
+          request.query
+        );
         return { data: patients };
       } catch (err) {
         reply.status(500);
