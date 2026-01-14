@@ -5,6 +5,8 @@ import autoLoad from "@fastify/autoload";
 function buildApp(opts = {}): FastifyInstance {
   const app = Fastify({
     logger: true,
+    bodyLimit: 5 * 1024 * 1024, // 5MB
+    requestTimeout: 60000, // 60 seconds
     ...opts,
   });
 
